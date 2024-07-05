@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
-import User from "../models/user";
 import { IUser } from "../interfaces/global";
+import { prisma } from "../prisma";
+import { User } from "@prisma/client";
 const JWT_SECRET = process.env.JWT_SECRET;
 interface verifyInterface {
     success: boolean,
@@ -14,13 +15,6 @@ export const signAccessToken = (_id: string, options: object = { expiresIn: "30d
         console.log("JWT error while singing access token", err);
     }
 };
-export const signEmailToken = (email: string, options: object = { expiresIn: "10m" }) => {
-    try {
-        return jwt.sign({ email }, JWT_SECRET, options);
-    } catch (err) {
-        console.log("JWT error while singing email token", err);
-    }
-}
 export const verifyToken = (token: string): verifyInterface => {
     try {
         let result: verifyInterface;
@@ -36,10 +30,11 @@ export const verifyToken = (token: string): verifyInterface => {
         }
     }
 };
-export const getUserFromToken = async (token: string | "_", _id?: string, populateArticles?: boolean): Promise<null | IUser> => {
+export const getUserFromToken = async (token: string | "_", _id?: string, populateArticles?: boolean): Promise<null | User> => {
     const userId = token === "_" ? _id : (verifyToken(token)).decoded._id;
     if (!userId) return null;
-    const user = await User.findByPk(userId, { attributes: { exclude: ['password', 'createdAt'] } })
+    //remove password
+    const user = await prisma.user.findFirst({where:{id:userId}})
     /*
     mongoose
     const user = await User.findById(userId).select("-password");

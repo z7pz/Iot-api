@@ -3,7 +3,7 @@ import { signAccessToken, verifyToken } from "../helpers/jwt";
 import { hash, compare } from "../helpers/bcrypt";
 import { loginSchema, registerSchema } from "../validation/auth";
 import { convertToMs } from "../helpers/date";
-import { prisma } from "prisma";
+import { prisma } from "../prisma";
 export interface ILoginBody {
     email: string,
     password: string,
@@ -16,18 +16,15 @@ export interface IRegisterBody extends ILoginBody {
 }
 const register = async (req: Request, res: Response) => {
     try {
-        const token = req.params.token;
-        if (!token) return res.status(401).send({
-            message: "الرجاء قم بتوفير توكن",
-            success: false,
-        })
-        const decodedToken = verifyToken(token);
-        if (!decodedToken.success) return res.status(401).send({
-            message: "الرجاء قم بتوفير توكن صالحة",
-            success: false,
-        })
         const body: IRegisterBody = req.body;
         await registerSchema.validateAsync(body);
+        const doesUserExists = await prisma.user.findFirst({where:{email:body.email}});
+        if (doesUserExists) {
+            return res.status(403).send({
+                message:"A user with this email already exists",
+                success:false,
+            })
+        }
         const hashedPassword = await hash(body.password);
         const newUser = await prisma.user.create({
             "data": {
@@ -70,10 +67,6 @@ const login = async (req: Request, res: Response) => {
         const body: ILoginBody = req.body;
         await loginSchema.validateAsync(body);
         const user = await prisma.user.findFirst({ where: { email: body.email } })
-        /*
-            mongoose
-            const user = await User.findOne({ email: body.email }).select("username password").lean();
-        */
         if (!user)
             return res.status(401).send({
                 success: false,
@@ -116,27 +109,9 @@ const logout = async (req: Request, res: Response) => {
         console.log(err);
     }
 };
-const verifyEmailToken = async (req: Request, res: Response) => {
-    try {
-        const token = req.params.token;
-        if (!token)
-            return res.status(401).send({
-                success: false,
-                message: "لم يتم توفير توكن لتاكيد الحساب",
-            });
-        const decodedToken = verifyToken(token);
-        if (!decodedToken.success) {
-            return res.status(401).send({ success: false, message: "الرجاء التاكد من التوكن المعطاة" })
-        }
-        res.status(201).send({ success: true, message: "تم تاكيد الحساب" })
-    } catch (err) {
-        console.log(err);
-        res.status(500).send({ success: true, message: "internal server error probarly" })
-    }
-};
+
 export {
     register,
     login,
     logout,
-    verifyEmailToken
 };

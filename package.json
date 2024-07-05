@@ -17,7 +17,6 @@
     "@types/joi": "^17.2.3",
     "@types/node": "^20.14.9",
     "@types/nodemailer": "^6.4.15",
-    "@types/sequelize": "^4.28.20",
     "nodemon": "^3.1.4",
     "prisma": "^5.16.1",
     "ts-node": "^10.9.2",
@@ -36,7 +35,6 @@
     "mqtt": "^5.7.3",
     "mysql2": "^3.10.2",
     "nodemailer": "^6.9.14",
-    "sequelize": "^6.37.3",
     "socket.io": "^4.7.5"
   }
 }
