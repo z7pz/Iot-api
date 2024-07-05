@@ -1,10 +1,9 @@
 import { Request, Response } from "express";
-import User from "../models/user";
-import { signAccessToken, signEmailToken, verifyToken } from "../helpers/jwt";
+import { signAccessToken, verifyToken } from "../helpers/jwt";
 import { hash, compare } from "../helpers/bcrypt";
 import { loginSchema, registerSchema } from "../validation/auth";
-import { sendMail } from "../helpers/nodemailer";
-import { convertToMs, formatDateToYMD } from "../helpers/date";
+import { convertToMs } from "../helpers/date";
+import { prisma } from "prisma";
 export interface ILoginBody {
     email: string,
     password: string,
@@ -30,12 +29,14 @@ const register = async (req: Request, res: Response) => {
         const body: IRegisterBody = req.body;
         await registerSchema.validateAsync(body);
         const hashedPassword = await hash(body.password);
-        const newUser = await User.create({
-            ...body,
-            password: hashedPassword,
-            createdAt: formatDateToYMD(new Date(), "_"),
-        });
-        const accessToken = signAccessToken(newUser._id.toString());
+        const newUser = await prisma.user.create({
+            "data": {
+                username: body.username,
+                "email": body.email,
+                "password": hashedPassword,
+            }
+        })
+        const accessToken = signAccessToken(newUser.id);
         const MONTH_IN_MS = convertToMs("1-month");
         res.cookie("access_token", accessToken, {
             httpOnly: true,
@@ -68,7 +69,7 @@ const login = async (req: Request, res: Response) => {
     try {
         const body: ILoginBody = req.body;
         await loginSchema.validateAsync(body);
-        const user = await User.findOne({ where: { email: body.email }, attributes: ["username", "password"] });
+        const user = await prisma.user.findFirst({ where: { email: body.email } })
         /*
             mongoose
             const user = await User.findOne({ email: body.email }).select("username password").lean();
@@ -86,7 +87,7 @@ const login = async (req: Request, res: Response) => {
                 message: "الايميل و الباسوورد لا يتطباقان",
             });
         const MONTH_IN_MS = convertToMs("1-month");
-        const accessToken = signAccessToken(String(user._id));
+        const accessToken = signAccessToken(String(user.id));
         res.cookie("access_token", accessToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production" ? true : false,
@@ -115,23 +116,6 @@ const logout = async (req: Request, res: Response) => {
         console.log(err);
     }
 };
-const sendEmailToken = (req: Request, res: Response) => {
-    try {
-        const email = req.body.email;
-        const token = signEmailToken(email, { expiresIn: "10m" });
-        //modifie this email
-        const html = `
-       <div>
-           <h1>اكمل عملية تسجيل الدخول</h1>
-           <a href=http://localhost:6060/auth/confirm/email/${token}>اضغط هنا</a>
-       </div>
-      `;
-        sendMail(email, "Complete singing up", html);
-        res.send({ success: true, message: "الرجاء تفقد الايميل" });
-    } catch (err) {
-        console.log(err);
-    }
-};
 const verifyEmailToken = async (req: Request, res: Response) => {
     try {
         const token = req.params.token;
@@ -154,6 +138,5 @@ export {
     register,
     login,
     logout,
-    sendEmailToken,
     verifyEmailToken
 };
