@@ -1,56 +1,59 @@
-import { IUser } from "interfaces/global";
-import express from "express";
 import "dotenv/config";
-import cors from "cors";
+import express from "express";
+import cors, { CorsOptions } from "cors";
 import compression from "compression";
 import cookieParser from "cookie-parser";
 import { authRouter } from "./routers/auth";
 import { isLoggedIn } from "./middleware/auth";
 import { Server } from "socket.io";
+import mqtt from "mqtt";
+import { prisma } from "./prisma";
+import { intoData } from "./helpers/intoData";
+import { User } from "@prisma/client";
+import { userRouter } from "./routers/user";
+import { locationsRouter } from "./routers/locations";
+
+declare module "express" {
+	interface Request {
+		user: User;
+	}
+}
+
 const app = express();
 
-app.use(cors({ origin: "*" }));
+const corsConfig: CorsOptions = {
+	origin: "*",
+};
+
+const io = new Server(2020, {
+	cors: corsConfig,
+});
+
+app.use(cors(corsConfig));
 app.use(compression());
 app.use(cookieParser(process.env.COOKIE_PARSER_SECRET));
 
 app.use(express.json());
-declare module "express" {
-	interface Request {
-		user: IUser;
-	}
-}
+
 app.use("/auth", isLoggedIn(false), authRouter);
-import http from "http";
+app.use("/user", isLoggedIn(true), userRouter);
+app.use("/locations", isLoggedIn(true), locationsRouter);
+
 app.listen(process.env.PORT, () => {
 	console.log("Server is running on port: " + process.env.PORT);
 });
 
-import mqtt from "mqtt";
-import { prisma } from "./prisma";
-
-let server2 = mqtt.connect("mqtt://46.101.128.142", {
+let server = mqtt.connect("mqtt://46.101.128.142", {
 	port: 1883,
 });
 
-server2.on("connect", (packet) => {});
-console.log("connected");
-
-server2.on("disconnect", (packet) => {
-	console.log("disconnected");
+server.on("connect", (_packet) => {
+	console.log("mqtt has been connected!");
 });
 
-interface IData {
-	id: string;
-	humidity: number;
-	temperature_c: number;
-	temperature_f: number;
-	mq135_value: number;
-	dust_concentration: number;
-}
-
-function intoData(payload: Buffer) {
-	return JSON.parse(payload.toString()) as IData;
-}
+server.on("disconnect", (_packet) => {
+	console.log("mqtt has been disconnected!");
+});
 
 const between = function (a, b, inclusive) {
 	return (n) => {
@@ -68,16 +71,29 @@ enum Mq135Status {
 	DANGEROUS = "DANGEROUS",
 }
 
-
-const io = new Server(2020, {
-	"cors": {
-		"origin": "*"	
-	}
-});
-
-
-server2.on("message", async (topic, payload, packet) => {
+server.on("message", async (topic, payload, packet) => {
 	let data = intoData(payload);
+	let device = await prisma.connectedDevices.findFirst({
+		where: {
+			id: data.id,
+		},
+		include: {
+			Device: {
+				include: {
+					Location: true,
+				},
+			},
+		},
+	});
+
+	if (!device) {
+		await prisma.connectedDevices.create({
+			data: {
+				id: data.id,
+			},
+		});
+	}
+
 	let status = Mq135Status.DANGEROUS;
 	if (between(0, 50, true)(data.mq135_value)) {
 		status = Mq135Status.GOOD;
@@ -97,14 +113,16 @@ server2.on("message", async (topic, payload, packet) => {
 		data: {
 			...data,
 			id: undefined,
+			connectedDevicesId: data.id,
 			mq135_statys: status,
 		},
 	});
-	io.emit("data", analytical_data);
+	io.emit(`data-${device.id}`, analytical_data);
 });
 io.on("connect", () => {
 	console.log("User has been connected!");
-})
+});
 
+server.subscribe("sensor/data");
 
-server2.subscribe("sensor/data");
+// data-connectedDevicesId

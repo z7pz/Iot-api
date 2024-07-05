@@ -1,43 +1,56 @@
 import jwt from "jsonwebtoken";
-import { IUser } from "../interfaces/global";
 import { prisma } from "../prisma";
 import { User } from "@prisma/client";
 const JWT_SECRET = process.env.JWT_SECRET;
 interface verifyInterface {
-    success: boolean,
-    err?: string
-    decoded?: { _id: string, iat: number, exp: number }
+	success: boolean;
+	err?: string;
+	decoded?: { _id: string; iat: number; exp: number };
 }
-export const signAccessToken = (_id: string, options: object = { expiresIn: "30d" }) => {
-    try {
-        return jwt.sign({ _id }, JWT_SECRET, options);
-    } catch (err) {
-        console.log("JWT error while singing access token", err);
-    }
+export const signAccessToken = (
+	_id: string,
+	options: object = { expiresIn: "30d" }
+) => {
+	try {
+		return jwt.sign({ _id }, JWT_SECRET, options);
+	} catch (err) {
+		console.log("JWT error while singing access token", err);
+	}
 };
 export const verifyToken = (token: string): verifyInterface => {
-    try {
-        let result: verifyInterface;
-        jwt.verify(token, JWT_SECRET, (err, decoded: { _id: string, iat: number, exp: number }) => {
-            if (err) return result = { ...result, success: false, err: err.message };
-            return result = { ...result, success: true, decoded }
-        });
-        return result;
-    } catch (err) {
-        if (err) {
-            console.log(err);
-            return { success: true, err: err }
-        }
-    }
+	try {
+		let result: verifyInterface;
+		jwt.verify(
+			token,
+			JWT_SECRET,
+			(err, decoded: { _id: string; iat: number; exp: number }) => {
+				if (err)
+					return (result = {
+						...result,
+						success: false,
+						err: err.message,
+					});
+				return (result = { ...result, success: true, decoded });
+			}
+		);
+		return result;
+	} catch (err) {
+		if (err) {
+			console.log(err);
+			return { success: true, err: err };
+		}
+	}
 };
-export const getUserFromToken = async (token: string | "_", _id?: string, populateArticles?: boolean): Promise<null | User> => {
-    const userId = token === "_" ? _id : (verifyToken(token)).decoded._id;
-    if (!userId) return null;
-    //remove password
-    const user = await prisma.user.findFirst({where:{id:userId}})
-    /*
-    mongoose
-    const user = await User.findById(userId).select("-password");
-    */
-    return user
+export const getUserFromToken = async (
+	token: string | "_",
+	_id?: string,
+	populateArticles?: boolean
+): Promise<null | User> => {
+	const userId = token === "_" ? _id : verifyToken(token).decoded._id;
+	if (!userId) return null;
+	const user = await prisma.user.findFirst({ where: { id: userId } });
+	return {
+		...user,
+		password: undefined,
+	};
 };
