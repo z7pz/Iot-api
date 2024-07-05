@@ -108,7 +108,6 @@ server.on("message", async (topic, payload, packet) => {
 		status = Mq135Status.DANGEROUS;
 	}
 
-	console.log(data);
 	let analytical_data = await prisma.data.create({
 		data: {
 			...data,
@@ -117,6 +116,7 @@ server.on("message", async (topic, payload, packet) => {
 			mq135_statys: status,
 		},
 	});
+	console.log(analytical_data);
 	io.emit(`data-${device.id}`, analytical_data);
 });
 io.on("connect", () => {
