@@ -15,12 +15,6 @@ export interface IRegisterBody extends ILoginBody {
 	birthdate: string;
 }
 
-const loginWithToken = async (req: Request, res: Response) => {
-	if (!req.headers.authorization)
-		return res.status(400).send("Unauthorized.");
-	let token = req.headers.authorization;
-    let data = verifyToken(token)
-};
 const register = async (req: Request, res: Response) => {
 	try {
 		const body: IRegisterBody = req.body;
@@ -85,14 +79,14 @@ const login = async (req: Request, res: Response) => {
 		if (!user)
 			return res.status(401).send({
 				success: false,
-				message: "الايميل و الباسوورد لا يتطباقان",
+				message: "Unauthorized",
 			});
 
 		const comparePasswords = await compare(body.password, user.password);
 		if (!comparePasswords)
 			return res.status(401).send({
 				success: false,
-				message: "الايميل و الباسوورد لا يتطباقان",
+				message: "Unauthorized",
 			});
 		const MONTH_IN_MS = convertToMs("1-month");
 		const accessToken = signAccessToken(String(user.id));
@@ -119,7 +113,7 @@ const logout = async (req: Request, res: Response) => {
 	try {
 		res.cookie("access_token", "")
 			.status(200)
-			.send({ success: true, message: "تم تسجيل الخروج بنجاح" });
+			.send({ success: true, message: "Logged out" });
 	} catch (err) {
 		console.log(err);
 	}

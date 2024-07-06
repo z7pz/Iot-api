@@ -2,6 +2,7 @@ import { prisma } from "../prisma";
 import { Request, Response } from "express";
 import z from "zod";
 
+// 
 export let s = {
 	body: z.object({
 		name: z.string().min(5),
@@ -23,7 +24,18 @@ export async function getLocations(req: Request, res: Response) {
 			},
 		},
 	});
-	res.send(data.locations);
+	res.send(data.locations || []);
+}
+
+export async function getNotification(req: Request, res: Response) {
+	console.log( req.params.id);	
+	let arr = await prisma.notification.findMany({
+		"where": {
+			locationId: req.params.id
+		},
+		
+	})
+	res.send(arr);
 }
 
 export async function createLocations(req: Request, res: Response) {
@@ -101,12 +113,23 @@ export async function attachDevice(req: Request, res: Response) {
 			message: "device not found",
 		});
 
-	await prisma.device.create({
-		data: {
-			connectedDevicesId: device.id,
-			locationId: location.id,
-		},
-	});
+		let d = await prisma.device.create({
+			data: {
+				connectedDevicesId: device.id,
+				locationId: location.id,
+			},
+			
+		});
+		await prisma.connectedDevices.update({
+			where: {
+				id: device.id,
+			},
+			"data": {
+				'Device': {
+					"connect": d
+				}
+			}
+		});
 
 	res.send("Attached!");
 }
@@ -132,8 +155,13 @@ export async function getDeviceData(req: Request, res: Response) {
 		where: {
 			id: req.params.deviceId,
 		},
+		"take": 50,
 		include: {
-			Data: true,
+			Data: {
+				"orderBy": {
+					"createdAt": "desc"
+				}
+			},
 		},
 	});
 	if (!device)

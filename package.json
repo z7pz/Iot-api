@@ -23,21 +23,22 @@
 		"typescript": "^5.5.3"
 	},
 	"dependencies": {
-		"zod": "^3.21.4",
-		"zod-express-middleware": "^1.4.0",
 		"@prisma/client": "5.16.1",
+		"aqi": "^0.1.1",
 		"bcrypt": "^5.1.1",
 		"compression": "^1.7.4",
 		"cookie-parser": "^1.4.6",
 		"cors": "^2.8.5",
 		"dotenv": "^16.4.5",
 		"express": "^4.19.2",
+		"firebase-admin": "^12.2.0",
 		"joi": "^17.13.3",
 		"jsonwebtoken": "^9.0.2",
 		"mqtt": "^5.7.3",
 		"mysql2": "^3.10.2",
 		"nodemailer": "^6.9.14",
 		"socket.io": "^4.7.5",
-		"zod": "^3.23.8"
+		"zod": "^3.23.8",
+		"zod-express-middleware": "^1.4.0"
 	}
 }

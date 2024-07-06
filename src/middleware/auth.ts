@@ -17,12 +17,12 @@ const isLoggedIn = (isAuthRequired: boolean | "_", setStatusOnly: boolean = fals
             if (!user && isAuthRequired) {
                 return res
                     .status(401)
-                    .send({ success: false, isLoggedIn: false, message: "لم يتم العثور على المستخدم" });
+                    .send({ success: false, isLoggedIn: false, message: "User not found" });
             }
             if (user && !isAuthRequired) {
                 return res
                     .status(403)
-                    .send({ success: false, isLoggedIn: true, message: "تم تسجيل الدخول مسبقا" });
+                    .send({ success: false, isLoggedIn: true, message: "You already logged in." });
             }
             if (user && isAuthRequired) {
                 req.user = user;
