@@ -6,7 +6,6 @@ import { intoData } from "./helpers/intoData";
 import { between } from "./helpers/between";
 import { EAQIStatus } from "./helpers/constants";
 import { intoMessage } from "./helpers/intoMessage";
-import type { IData } from "./interfaces/Data";
 import { Server } from "socket.io";
 
 const USER_TOKEN =
@@ -37,9 +36,9 @@ export class MqttClient {
 					id: data.id,
 				},
 				include: {
-					Device: {
+					devices: {
 						include: {
-							Location: true,
+							location: true,
 						},
 					},
 				},
@@ -64,15 +63,19 @@ export class MqttClient {
 					temperatureC: data.temperature_c,
 					temperatureF: data.temperature_f,
 					AQIStatus: status,
-					connectedDevicesId: data.id,
+					connectedDevice: {
+						connect: {
+							id: data.id,
+						},
+					},
 				},
 			});
-
+			console.log(processedData);
 			io.emit(`data-${device.id}`, processedData);
 
-			if (![EAQIStatus.GOOD].includes(status)) { // if not good
-				for (let i = 0; i < device.Device.length; i++) {
-					const location = device.Device[i].locationId;
+			if (![EAQIStatus.GOOD].includes(status)) {
+				for (let i = 0; i < device.devices.length; i++) {
+					const location = device.devices[i].locationId;
 					let message = intoMessage(processedData.AQIStatus);
 					await this.sendNotificationToUser(
 						`Warning air pollution is ${status
