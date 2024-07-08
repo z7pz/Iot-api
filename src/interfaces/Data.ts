@@ -3,6 +3,6 @@ export interface IData {
 	humidity: number;
 	temperature_c: number;
 	temperature_f: number;
-	mq135_value: number;
-	dust_concentration: number;
+	AQI: number;
+	dust_percentage: number;
 }

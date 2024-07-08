@@ -10,5 +10,5 @@ export async function getUser(req: Request, res: Response) {
 			locations: true,
 		},
 	});
-	res.send(data);
+	res.send({ ...data, password: undefined, email: undefined });
 }

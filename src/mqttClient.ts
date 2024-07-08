@@ -4,11 +4,10 @@ import serviceAccount from "../hackathon-89524-firebase-adminsdk-mq9dh-21a22d3ae
 import { prisma } from "./prisma";
 import { intoData } from "./helpers/intoData";
 import { between } from "./helpers/between";
-import { Mq135Status } from "./helpers/constants";
+import { EAQIStatus } from "./helpers/constants";
 import { intoMessage } from "./helpers/intoMessage";
 import type { IData } from "./interfaces/Data";
 import { Server } from "socket.io";
-import { checkPrimeSync } from "crypto";
 
 const USER_TOKEN =
 	"e0-amaF8TJSB08PCb0QOs1:APA91bGeRexHZZYzFGjPECRy_-MFc0B-XHykK4kKTTCaBKYmKOlxStulVarQTHs0XNSx7qfAlBxtn3XKdmFQTaPfy2c5LsrIEFxsFQyOCdVCJ1LXY0mtTMSWG2QZnV7T0mP0lENODuUI";
@@ -33,7 +32,6 @@ export class MqttClient {
 		});
 		server.on("message", async (_topic, payload) => {
 			let data = intoData(payload);
-			console.log(data);
 			let device = await prisma.connectedDevices.findFirst({
 				where: {
 					id: data.id,
@@ -55,35 +53,39 @@ export class MqttClient {
 				});
 			}
 
-			let status = this.getmq135Status(data);
+			let status = this.getEAQIStatus(data.AQI);
 
-			let analytical_data = await prisma.data.create({
+			let processedData = await prisma.data.create({
 				data: {
-					...data,
 					id: undefined,
+					AQI: data.AQI,
+					humidity: data.humidity,
+					dustPercentage: data.dust_percentage,
+					temperatureC: data.temperature_c,
+					temperatureF: data.temperature_f,
+					AQIStatus: status,
 					connectedDevicesId: data.id,
-					mq135_statys: status,
 				},
 			});
-			console.log(analytical_data)
-			
 
-			
-			io.emit(`data-${device.id}`, analytical_data);
+			io.emit(`data-${device.id}`, processedData);
 
-			if ([Mq135Status.GOOD].includes(status)) {
-				// do nothing
-			} else {
-				// send notification into the location's user
+			if (![EAQIStatus.GOOD].includes(status)) { // if not good
 				for (let i = 0; i < device.Device.length; i++) {
 					const location = device.Device[i].locationId;
-					let message = intoMessage(analytical_data.mq135_statys);
-					await this.sendNotificationToUser(`Warning air pollution is ${status.split("_").join(" ").toLowerCase()}`, message);
+					let message = intoMessage(processedData.AQIStatus);
+					await this.sendNotificationToUser(
+						`Warning air pollution is ${status
+							.split("_")
+							.join(" ")
+							.toLowerCase()}`,
+						message
+					);
 					await prisma.notification.create({
 						data: {
 							locationId: location,
-							dataId: analytical_data.id,
-							message: intoMessage(analytical_data.mq135_statys),
+							dataId: processedData.id,
+							message: intoMessage(processedData.AQIStatus),
 						},
 					});
 				}
@@ -103,19 +105,19 @@ export class MqttClient {
 			console.log("sending notification ERROR");
 		}
 	}
-	getmq135Status(data: IData) {
-		let status = Mq135Status.DANGEROUS;
-		if (between(0, 50, true)(data.mq135_value)) {
-			status = Mq135Status.GOOD;
+	getEAQIStatus(aqi: number) {
+		let status = EAQIStatus.DANGEROUS;
+		if (between(0, 50, true)(aqi)) {
+			status = EAQIStatus.GOOD;
 		}
-		if (between(51, 100, true)(data.mq135_value)) {
-			status = Mq135Status.MODERATE;
+		if (between(51, 100, true)(aqi)) {
+			status = EAQIStatus.MODERATE;
 		}
-		if (between(101, 150, true)(data.mq135_value)) {
-			status = Mq135Status.UNHEALTHY_FOR_SENSETIVE_PEOPLE;
+		if (between(101, 150, true)(aqi)) {
+			status = EAQIStatus.UNHEALTHY_FOR_SENSETIVE_PEOPLE;
 		}
-		if (data.mq135_value > 151) {
-			status = Mq135Status.DANGEROUS;
+		if (aqi > 151) {
+			status = EAQIStatus.DANGEROUS;
 		}
 		return status;
 	}

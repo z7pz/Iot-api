@@ -44,12 +44,12 @@ model Device {
 
 model Data {
   id                 String           @id @default(uuid())
+  AQI                Int
+  AQIStatus          String
+  dustPercentage    Int
   humidity           Int
-  temperature_c      Int
-  temperature_f      Int
-  mq135_value        Int
-  mq135_statys       String
-  dust_concentration Int
+  temperatureC       Int
+  temperatureF       Int
   createdAt          DateTime         @default(now())
   device             ConnectedDevices @relation(fields: [connectedDevicesId], references: [id])
   connectedDevicesId String

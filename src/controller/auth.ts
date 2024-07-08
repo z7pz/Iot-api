@@ -9,10 +9,7 @@ export interface ILoginBody {
 	password: string;
 }
 export interface IRegisterBody extends ILoginBody {
-	name: string;
 	username: string;
-	gender: "male | female";
-	birthdate: string;
 }
 
 const register = async (req: Request, res: Response) => {
@@ -43,9 +40,7 @@ const register = async (req: Request, res: Response) => {
 			secure: process.env.NODE_ENV === "production" ? true : false,
 			maxAge: MONTH_IN_MS,
 		});
-		return res
-			.status(200)
-			.send({ success: true, message: "تم انشاء الحساب" });
+		res.status(200).send({ success: true, accessToken });
 	} catch (err) {
 		console.log(err);
 		switch (true) {
@@ -95,7 +90,7 @@ const login = async (req: Request, res: Response) => {
 			secure: process.env.NODE_ENV === "production" ? true : false,
 			maxAge: MONTH_IN_MS,
 		});
-		res.status(201).send({ success: true, accessToken });
+		res.status(200).send({ success: true, accessToken });
 	} catch (err) {
 		console.log(err);
 		if (err.isJoi) {
