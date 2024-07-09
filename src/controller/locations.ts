@@ -2,14 +2,13 @@ import { prisma } from "../prisma";
 import { Request, Response } from "express";
 import z from "zod";
 
-//
-export let s = {
+export let raw = {
 	body: z.object({
 		name: z.string().min(5),
 	}),
 } as const;
 
-export const shema = z.object(s);
+export const shema = z.object(raw);
 
 export async function getLocations(req: Request, res: Response) {
 	let data = await prisma.user.findFirst({

@@ -7,6 +7,7 @@ import { between } from "./helpers/between";
 import { EAQIStatus } from "./helpers/constants";
 import { intoMessage } from "./helpers/intoMessage";
 import { Server } from "socket.io";
+import { emitToDevices } from "./socketClient";
 
 const USER_TOKEN =
 	"e0-amaF8TJSB08PCb0QOs1:APA91bGeRexHZZYzFGjPECRy_-MFc0B-XHykK4kKTTCaBKYmKOlxStulVarQTHs0XNSx7qfAlBxtn3XKdmFQTaPfy2c5LsrIEFxsFQyOCdVCJ1LXY0mtTMSWG2QZnV7T0mP0lENODuUI";
@@ -71,7 +72,10 @@ export class MqttClient {
 				},
 			});
 			console.log(processedData);
-			io.emit(`data-${device.id}`, processedData);
+			for (let i = 0; i < device.devices.length; i++) {
+				const { id } = device.devices[i];
+				emitToDevices(id, "data", processedData);
+			}
 
 			if (![EAQIStatus.GOOD].includes(status)) {
 				for (let i = 0; i < device.devices.length; i++) {

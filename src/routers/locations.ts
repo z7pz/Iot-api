@@ -7,7 +7,7 @@ import {
 	getLocation,
 	getLocations,
 	getNotification,
-	s,
+	raw,
 } from "../controller/locations";
 import { validateRequest } from "zod-express-middleware";
 const locationsRouter = Router();
@@ -19,6 +19,6 @@ locationsRouter.get("/:id/notifications", getNotification);
 locationsRouter.get("/:id/:deviceId", getDeviceData);
 
 locationsRouter.post("/:id/:deviceId", attachDevice);
-locationsRouter.post("/", validateRequest(s), createLocations);
+locationsRouter.post("/", validateRequest(raw), createLocations);
 
 export { locationsRouter };

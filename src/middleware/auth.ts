@@ -9,7 +9,6 @@ const isLoggedIn = (isAuthRequired: boolean | "_", setStatusOnly: boolean = fals
                 !decodedToken.success
                     ? null
                     : await getUserFromToken("_", decodedToken.decoded._id);
-
             if (setStatusOnly) {
                 req.user = user;
                 return next();
