@@ -26,7 +26,7 @@ const authenticate = (socket: Socket, next: (err?: Error) => void) => {
 };
 
 export const socketConnection = () => {
-	io = new Server(2020, {
+	io = new Server(+process.env.SOCKET_PORT, {
 		cors: {
 			origin: process.env.CLIENT_URL,
 		},
