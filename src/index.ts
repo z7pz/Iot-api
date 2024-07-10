@@ -28,7 +28,7 @@ app.use(cookieParser(process.env.COOKIE_PARSER_SECRET));
 
 app.use(express.json());
 
-app.use("/auth", isLoggedIn(false), authRouter);
+app.use("/auth", authRouter);
 app.use("/user", isLoggedIn(true), userRouter);
 app.use("/locations", isLoggedIn(true), locationsRouter);
 

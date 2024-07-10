@@ -35,15 +35,15 @@ const register = async (req: Request, res: Response) => {
 				token: body.token
 			},
 		});
-	
+
 		const accessToken = signAccessToken(newUser.id);
 		const MONTH_IN_MS = convertToMs("1-month");
 		res.cookie("access_token", accessToken, {
-			httpOnly: true,
+			httpOnly: false,
 			secure: process.env.NODE_ENV === "production" ? true : false,
 			maxAge: MONTH_IN_MS,
 		});
-		
+
 		res.status(200).send({ success: true, accessToken });
 	} catch (err) {
 		console.log(err);
@@ -98,7 +98,7 @@ const login = async (req: Request, res: Response) => {
 		const MONTH_IN_MS = convertToMs("1-month");
 		const accessToken = signAccessToken(String(user.id));
 		res.cookie("access_token", accessToken, {
-			httpOnly: true,
+			httpOnly: false,
 			secure: process.env.NODE_ENV === "production" ? true : false,
 			maxAge: MONTH_IN_MS,
 		});
