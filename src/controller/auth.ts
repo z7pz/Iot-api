@@ -118,7 +118,7 @@ const login = async (req: Request, res: Response) => {
 };
 const logout = async (req: Request, res: Response) => {
 	try {
-		res.cookie("access_token", "")
+		res.cookie("access_token", "", { maxAge: 5 })
 			.status(200)
 			.send({ success: true, message: "Logged out" });
 	} catch (err) {
