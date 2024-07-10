@@ -93,12 +93,13 @@ export async function attachDevice(req: Request, res: Response) {
 			success: false,
 			message: "location not found",
 		});
-	if (location.devices.map((c) => c.id).includes(req.params.deviceId)) {
-		return res.send({
-			success: false,
-			message: "Device already connected to this location",
-		});
-	}
+	// 	console.log(location.devices.map((c) => c.id))
+	// if (location.devices.map((c) => c.id).includes(req.params.deviceId)) {
+	// 	return res.send({
+	// 		success: false,
+	// 		message: "Device already connected to this location",
+	// 	});
+	// }
 
 	let device = await prisma.connectedDevices.findFirst({
 		where: {
@@ -110,7 +111,12 @@ export async function attachDevice(req: Request, res: Response) {
 			success: false,
 			message: "device not found",
 		});
-
+	if (location.devices.map((c) => c.connectedDeviceId).includes(device.id)) {
+		return res.send({
+			success: false,
+			message: "Device already connected to this location",
+		});
+	}
 	let d = await prisma.device.create({
 		data: {
 			connectedDeviceId: device.id,
@@ -197,3 +203,4 @@ export async function getDeviceData(req: Request, res: Response) {
 		data: device.connectedDevice.data,
 	});
 }
+

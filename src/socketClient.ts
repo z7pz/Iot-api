@@ -1,24 +1,28 @@
-import { Data } from "@prisma/client";
-import { verifyToken } from "./helpers/jwt";
+import { Data, Notification } from "@prisma/client";
+import { getUserFromToken, verifyToken } from "./helpers/jwt";
 import { Server, Socket } from "socket.io";
+import { prisma } from "prisma";
 
 const PUBLICDEVICEIDS = [];
 
 let io: Server;
 
-const authenticate = (socket: Socket, next: (err?: Error) => void) => {
+const authenticate = async (socket: Socket, next: (err?: Error) => void) => {
 	// Applications often use tokens in auth, but postman does not support it
 	const token =
 		socket.handshake.auth?.token || socket.handshake.headers?.token;
 
-	// TODO create more checks if it's actuall in the database
 
 	if (!token) {
 		console.log("Unauthorized");
 		return next(new Error("Unauthorized"));
 	}
-	let res = verifyToken(token);
-	if (res.success) return next();
+	let user = await getUserFromToken(token);
+	if (user) {
+		// @ts-ignore
+		socket.user = user
+		next()
+	}
 	else {
 		console.log("Unauthorized");
 		return next(new Error("Unauthorized"));
@@ -28,7 +32,7 @@ const authenticate = (socket: Socket, next: (err?: Error) => void) => {
 export const socketConnection = () => {
 	io = new Server(+process.env.SOCKET_PORT, {
 		cors: {
-			origin: process.env.CLIENT_URL,
+			origin: "*", // TODO CLIENT_URL
 		},
 	});
 
@@ -41,9 +45,9 @@ export const socketConnection = () => {
 	// });
 
 	// Private namespace
-	const privateNamespace = io.of(/^\/devices\/.+$/);
-	privateNamespace.use(authenticate); // Apply authentication middleware
-	privateNamespace.on("connection", (socket) => {
+	const devicesNamespace = io.of(/^\/devices\/.+$/);
+	devicesNamespace.use(authenticate); // Apply authentication middleware
+	devicesNamespace.on("connection", (socket) => {
 		const deviceId = socket.nsp.name.split("/").pop();
 		console.log(
 			`A user connected to private namespace for deviceId: ${deviceId}`
@@ -62,6 +66,23 @@ export const socketConnection = () => {
 			);
 		});
 	});
+
+	const privateNamespace = io.of("notifications");
+	privateNamespace.use(authenticate); // Apply authentication middleware
+	privateNamespace.on("connection", (socket) => {
+
+		socket.join(socket.user.id)
+
+		socket.on("notification", (data) => {
+			socket.to(socket.user.id).emit("notification", data); 
+		});
+
+		socket.on("disconnect", () => {
+			console.log(
+				`notifcations connected!`
+			);
+		});
+	});
 	return io;
 };
 
@@ -69,4 +90,11 @@ export const emitToDevices = (deviceId: string, event: string, data: Data) => {
 	const namespace = `/devices/${deviceId}`;
 	const targetNamespace = io.of(namespace);
 	targetNamespace.to(deviceId).emit(event, data);
+};
+
+
+export const emitNotification = (userId: string, event: string, data: Notification) => {
+	const namespace = `/notifications`;
+	const targetNamespace = io.of(namespace);
+	targetNamespace.to(userId).emit(event, data);
 };

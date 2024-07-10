@@ -9,6 +9,11 @@ import { User } from "@prisma/client";
 import { locationsRouter, userRouter, authRouter } from "./routers";
 import { MqttClient } from "./mqttClient";
 
+// import { prisma } from "./prisma";
+// (async () => {
+// 	await prisma.notification.deleteMany({})
+// })();
+
 const app = express();
 const io = socketConnection();
 const mqtt = new MqttClient(
@@ -19,7 +24,7 @@ const mqtt = new MqttClient(
 
 app.use(
 	cors({
-		origin: "*",
+		origin: process.env.CLIENT_URL,
 	})
 );
 
@@ -40,5 +45,12 @@ app.listen(process.env.PORT, () => {
 declare module "express" {
 	interface Request {
 		user: User;
+	}
+}
+
+declare module "socket.io" {
+	interface Socket {
+		user: User;
+
 	}
 }

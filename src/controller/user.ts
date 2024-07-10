@@ -8,6 +8,11 @@ export async function getUser(req: Request, res: Response) {
 		},
 		include: {
 			locations: true,
+			notifications: {
+				include: {
+					location: true,
+				},
+			},
 		},
 	});
 	res.send({ ...data, password: undefined, email: undefined });

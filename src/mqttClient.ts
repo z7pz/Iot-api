@@ -7,7 +7,7 @@ import { between } from "./helpers/between";
 import { EAQIStatus } from "./helpers/constants";
 import { intoMessage } from "./helpers/intoMessage";
 import { Server } from "socket.io";
-import { emitToDevices } from "./socketClient";
+import { emitNotification, emitToDevices } from "./socketClient";
 
 const USER_TOKEN =
 	"e0-amaF8TJSB08PCb0QOs1:APA91bGeRexHZZYzFGjPECRy_-MFc0B-XHykK4kKTTCaBKYmKOlxStulVarQTHs0XNSx7qfAlBxtn3XKdmFQTaPfy2c5LsrIEFxsFQyOCdVCJ1LXY0mtTMSWG2QZnV7T0mP0lENODuUI";
@@ -16,7 +16,7 @@ admin.initializeApp({
 	credential: admin.credential.cert(serviceAccount as any),
 });
 export class MqttClient {
-	constructor(ip: string, port: number, io: Server) {
+	constructor(ip: string, port: number, public io: Server) {
 		let server = mqtt.connect(ip, {
 			port: port,
 		});
@@ -39,7 +39,11 @@ export class MqttClient {
 				include: {
 					devices: {
 						include: {
-							location: true,
+							location: {
+								include: {
+									user: true,
+								},
+							},
 						},
 					},
 				},
@@ -71,6 +75,8 @@ export class MqttClient {
 					},
 				},
 			});
+
+			// TODO you can combind both in one loop
 			console.log(processedData);
 			for (let i = 0; i < device.devices.length; i++) {
 				const { id } = device.devices[i];
@@ -79,34 +85,68 @@ export class MqttClient {
 
 			if (![EAQIStatus.GOOD].includes(status)) {
 				for (let i = 0; i < device.devices.length; i++) {
-					const location = device.devices[i].locationId;
-					let message = intoMessage(processedData.AQIStatus);
-					await this.sendNotificationToUser(
-						`Warning air pollution is ${status
+					const location = device.devices[i].location;
+					let message = {
+						title: `Warning air pollution is ${status
 							.split("_")
 							.join(" ")
 							.toLowerCase()}`,
-						message
-					);
-					await prisma.notification.create({
-						data: {
-							locationId: location,
-							dataId: processedData.id,
-							message: intoMessage(processedData.AQIStatus),
-						},
+						description: "Warning air pollution",
+						status: status.split("_").join(" "),
+					};
+					await this.sendNotification({
+						message,
+						dataId: processedData.id,
+						locationId: location.id,
+						userId: location.user.id,
+						connectedDevicesId: device.id,
+						token: location.user.token
 					});
 				}
 			}
 		});
 	}
-	async sendNotificationToUser(status: string, message: string) {
+	async sendNotification({
+		message,
+		locationId,
+		dataId,
+		userId,
+		connectedDevicesId,
+		token
+	}: {
+		message: { title: string; description: string; status: string };
+		locationId: string;
+		dataId: string;
+		userId: string;
+		connectedDevicesId: string;
+		token: string | null,
+	}) {
+		if(token) {
+			console.log("Sending notification using firebase")
+			await this.sendNotificationToUser(message.title, message.description, token);
+		}
+		let notification = await prisma.notification.create({
+			data: {
+				locationId,
+				dataId,
+				userId,
+				connectedDevicesId,
+				title: message.title,
+				description: message.description,
+				status: message.status,
+			},
+		});
+		console.log("Sending notification using socket.io")
+		emitNotification(userId, "notification", notification)
+	}
+	async sendNotificationToUser(status: string, message: string, token: string) {
 		try {
 			await admin.messaging().send({
 				notification: {
 					title: status.split("_").join(" ").toLowerCase(),
 					body: message,
 				},
-				token: USER_TOKEN,
+				token,
 			});
 		} catch (err) {
 			console.log("sending notification ERROR");
