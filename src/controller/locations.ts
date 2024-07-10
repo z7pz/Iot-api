@@ -172,6 +172,9 @@ export async function getDeviceData(req: Request, res: Response) {
 			connectedDevice: {
 				include: {
 					data: {
+						orderBy: {
+							createdAt: "desc",
+						},
 						take: ITEMSPERPAGE,
 						skip: ITEMSPERPAGE * page,
 					},
