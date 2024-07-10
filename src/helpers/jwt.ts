@@ -49,8 +49,8 @@ export const getUserFromToken = async (
 	const userId = token === "_" ? _id : verifyToken(token).decoded._id;
 	if (!userId) return null;
 	const user = await prisma.user.findFirst({ where: { id: userId } });
-	return {
+	return user ? {
 		...user,
 		password: undefined,
-	};
+	} : null;
 };

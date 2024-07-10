@@ -24,6 +24,7 @@ const isLoggedIn = (isAuthRequired: boolean | "_", setStatusOnly: boolean = fals
                     .send({ success: false, isLoggedIn: true, message: "You already logged in." });
             }
             if (user && isAuthRequired) {
+                console.log(user)
                 req.user = user;
                 return next();
             }
