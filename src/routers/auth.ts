@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { login, logout, register } from "../controller/auth";
-import { isLoggedIn } from "middleware";
+import { isLoggedIn } from "../middleware";
 
 const authRouter = Router();
 
