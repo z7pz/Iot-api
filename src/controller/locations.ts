@@ -171,7 +171,6 @@ export async function getDeviceData(req: Request, res: Response) {
 			},
 		},
 	});
-	// TODO check me before everything
 
 	let device = await prisma.device.findFirst({
 		where: {

@@ -108,7 +108,7 @@ export class MqttClient {
 			},
 		});
 
-		if (PUBLIC_DEVICES.includes(device.id)) {
+		if (PUBLIC_DEVICES.map(c => c.id).includes(device.id)) {
 			console.log(device.id)
 			emitToPublicDevices(device.id, "data", processedData);
 		}

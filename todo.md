@@ -1,10 +1,10 @@
-- [ ] Create design pattrens (managers and handlers)
-- [ ] Create the public devices socket
-- [ ] Folder strucutre
-- [ ] Each function do one thing
+- [X] Create design pattrens (managers and handlers)
+- [X] Create the public devices socket
+- [X] Folder strucutre
+- [X] Each function do one thing
 - [ ] E2E MQTT into BACKEND 
 - [ ] CORS ERROR
 - [ ] PRESENTATION WITH FIGMA
-- [ ] postman docs
+- [X] postman docs
 - [ ] MQTT postman requests
 - [ ] Send notification for all things (temperature, dustPercentage, AQI)
