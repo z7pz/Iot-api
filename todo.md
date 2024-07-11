@@ -6,5 +6,5 @@
 - [ ] CORS ERROR
 - [ ] PRESENTATION WITH FIGMA
 - [X] postman docs
-- [ ] MQTT postman requests
-- [ ] Send notification for all things (temperature, dustPercentage, AQI)
+- [X] MQTT postman requests
+- [-] Send notification for all things (temperature, dustPercentage, AQI)

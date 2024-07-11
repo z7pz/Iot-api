@@ -17,7 +17,6 @@ import {
 } from "./services/notificaiton";
 import { PUBLIC_DEVICES } from "./helpers/constants";
 
-
 export class MqttClientFactory {
 	static create(ip: string, port: number, io: Server): MqttClient {
 		return new MqttClient(
@@ -51,7 +50,6 @@ export class MqttClient {
 		this.server.subscribe("sensor/data");
 
 		this.server.on("connect", this.handleConnect.bind(this));
-
 		this.server.on("disconnect", this.handleDisconnect.bind(this));
 		this.server.on("message", this.handleMessage.bind(this));
 	}
@@ -108,8 +106,8 @@ export class MqttClient {
 			},
 		});
 
-		if (PUBLIC_DEVICES.map(c => c.id).includes(device.id)) {
-			console.log(device.id)
+		if (PUBLIC_DEVICES.map((c) => c.id).includes(device.id)) {
+			console.log(device.id);
 			emitToPublicDevices(device.id, "data", processedData);
 		}
 
@@ -117,18 +115,72 @@ export class MqttClient {
 			emitToDevices(id, "data", processedData);
 		});
 
-		if (![EAQIStatus.GOOD].includes(status)) {
+
+		if (processedData.temperatureC > 45) {
 			await Promise.all(
 				device.devices.map(async ({ location }) => {
 					await this.notificationService.notifyAll({
-						title: `Warning air pollution is ${status
+						title: `الحرارة مرتفعة`,
+						description: "الحرارة مرتفعة",
+						status: "",
+						dataId: processedData.id,
+						location,
+						userId: location.user.id,
+						connectedDevicesId: device.id,
+						token: location.user.token,
+					});
+				})
+			);
+		}
+
+
+		if (processedData.humidity > 60) {
+			await Promise.all(
+				device.devices.map(async ({ location }) => {
+					await this.notificationService.notifyAll({
+						title: `تحذير رطوبة عالية`,
+						description: "تحذير رطوبة عالية",
+						status: "",
+						dataId: processedData.id,
+						location,
+						userId: location.user.id,
+						connectedDevicesId: device.id,
+						token: location.user.token,
+					});
+				})
+			);
+		}
+
+		if (processedData.dustPercentage > 50) {
+			await Promise.all(
+				device.devices.map(async ({ location }) => {
+					await this.notificationService.notifyAll({
+						title: `تحذير تلوث مستوى تلوث عالي في الهواء المحيط`,
+						description: "تحذير تلوث مستوى تلوث عالي في الهواء المحيط",
+						status: "",
+						dataId: processedData.id,
+						location,
+						userId: location.user.id,
+						connectedDevicesId: device.id,
+						token: location.user.token,
+					});
+				})
+			);
+		}
+
+		console.log(data.AQI);
+		if (data.AQI >= 200) {
+			await Promise.all(
+				device.devices.map(async ({ location }) => {
+					await this.notificationService.notifyAll({
+						title: `جودة الهواء ${status
 							.split("_")
 							.join(" ")
 							.toLowerCase()}`,
 						description: "Warning air pollution",
 						status: status.split("_").join(" "),
 						dataId: processedData.id,
-						locationId: location.id,
+						location,
 						userId: location.user.id,
 						connectedDevicesId: device.id,
 						token: location.user.token,

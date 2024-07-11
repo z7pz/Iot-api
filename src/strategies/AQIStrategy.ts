@@ -1,10 +1,10 @@
 export enum EAQIStatus {
-	GOOD = "GOOD",
-	MODERATE = "MODERATE",
-	UNHEALTHY_FOR_SENSITIVE_GROUPS = "UNHEALTHY_FOR_SENSITIVE_GROUPS",
-	UNHEALTHY = "UNHEALTHY",
-	VERY_UNHEALTHY = "VERY_UNHEALTHY",
-	HAZARDOUS = "HAZARDOUS",
+	GOOD = "جيدة",
+	MODERATE = "معتدلة",
+	UNHEALTHY_FOR_SENSITIVE_GROUPS = "غير صحي للأشخاص الحساسة",
+	UNHEALTHY = "غير صحي",
+	VERY_UNHEALTHY = "غير صحي جدا",
+	HAZARDOUS = "خطير جداً",
 }
 export interface AQIStrategy {
 	getStatus(aqi: number): EAQIStatus;

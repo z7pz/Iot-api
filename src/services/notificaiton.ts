@@ -2,6 +2,7 @@ import admin from "firebase-admin";
 import serviceAccount from "../../hackathon-89524-firebase-adminsdk-mq9dh-21a22d3ae7.json";
 import { emitNotification } from "../socket";
 import { prisma } from "../prisma";
+import { Location } from "@prisma/client";
 
 admin.initializeApp({
 	credential: admin.credential.cert(serviceAccount as any),
@@ -13,7 +14,7 @@ export type NotificationMessage = {
 	description: string;
 	status: string;
 	dataId: string;
-	locationId: string;
+	location: Location;
 	userId: string;
 	connectedDevicesId: string;
 	token: string;
@@ -30,8 +31,8 @@ export class FirebaseNotificationObserver implements NotificationObserver {
 			try {
 				await admin.messaging().send({
 					notification: {
-						title: message.title,
-						body: message.description,
+						title: message.location.id,
+						body: message.title,
 					},
 					token: message.token,
 				});
@@ -47,7 +48,7 @@ export class SocketNotificationObserver implements NotificationObserver {
 	async notify(message: NotificationMessage): Promise<void> {
 		let notification = await prisma.notification.create({
 			data: {
-				locationId: message.locationId,
+				locationId: message.location.id,
 				dataId: message.dataId,
 				userId: message.userId,
 				connectedDevicesId: message.connectedDevicesId,
