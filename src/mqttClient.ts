@@ -118,7 +118,7 @@ export class MqttClient {
 			emitToDevices(id, "data", processedData);
 		});
 
-		if (processedData.temperatureC > 50) {
+		if (processedData.temperatureC > 45) {
 			await Promise.all(
 				device.devices.map(async ({ location }) => {
 					const n = cache[`${location.id}-temperature`];
