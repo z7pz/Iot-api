@@ -134,7 +134,10 @@ export async function attachDevice(req: Request, res: Response) {
 		},
 	});
 
-	res.send("Attached!");
+	res.send({
+		success: true,
+		message: "Attached"
+	});
 }
 
 export async function getDeviceData(req: Request, res: Response) {

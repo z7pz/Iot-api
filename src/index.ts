@@ -6,7 +6,7 @@ import cookieParser from "cookie-parser";
 import { isLoggedIn } from "./middleware/auth";
 import { socketConnection } from "./socket";
 import { User } from "@prisma/client";
-import { locationsRouter, userRouter, authRouter } from "./routers";
+import { locationsRouter, userRouter, authRouter, publicRouter } from "./routers";
 import { MqttClient, MqttClientFactory } from "./mqttClient";
 
 // import { prisma } from "./prisma";
@@ -36,6 +36,7 @@ app.use(express.json());
 app.use("/auth", authRouter);
 app.use("/user", isLoggedIn(true), userRouter);
 app.use("/locations", isLoggedIn(true), locationsRouter);
+app.use("/public", isLoggedIn(false), publicRouter);
 
 app.listen(process.env.PORT, () => {
 	console.log("Server is running on port: " + process.env.PORT);
