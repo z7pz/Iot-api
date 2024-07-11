@@ -1,9 +1,6 @@
 import { Data, Notification } from "@prisma/client";
-import { getUserFromToken, verifyToken } from "./helpers/jwt";
+import { getUserFromToken } from "./helpers/jwt";
 import { Server, Socket } from "socket.io";
-import { prisma } from "prisma";
-
-const PUBLICDEVICEIDS = [];
 
 let io: Server;
 
@@ -14,7 +11,6 @@ const authenticate = async (socket: Socket, next: (err?: Error) => void) => {
 
 
 	if (!token) {
-		console.log("Unauthorized");
 		return next(new Error("Unauthorized"));
 	}
 	let user = await getUserFromToken(token);
@@ -24,7 +20,6 @@ const authenticate = async (socket: Socket, next: (err?: Error) => void) => {
 		next()
 	}
 	else {
-		console.log("Unauthorized");
 		return next(new Error("Unauthorized"));
 	}
 };
@@ -91,6 +86,13 @@ export const emitToDevices = (deviceId: string, event: string, data: Data) => {
 	const targetNamespace = io.of(namespace);
 	targetNamespace.to(deviceId).emit(event, data);
 };
+
+export const emitToPublicDevices = (deviceId: string, event: string, data: Data) => {
+	const namespace = `/devices`;
+	const targetNamespace = io.of(namespace);
+	targetNamespace.to(deviceId).emit(event, data);
+};
+
 
 
 export const emitNotification = (userId: string, event: string, data: Notification) => {

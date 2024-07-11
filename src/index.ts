@@ -4,10 +4,10 @@ import cors from "cors";
 import compression from "compression";
 import cookieParser from "cookie-parser";
 import { isLoggedIn } from "./middleware/auth";
-import { socketConnection } from "./socketClient";
+import { socketConnection } from "./socket";
 import { User } from "@prisma/client";
 import { locationsRouter, userRouter, authRouter } from "./routers";
-import { MqttClient } from "./mqttClient";
+import { MqttClient, MqttClientFactory } from "./mqttClient";
 
 // import { prisma } from "./prisma";
 // (async () => {
@@ -16,7 +16,7 @@ import { MqttClient } from "./mqttClient";
 
 const app = express();
 const io = socketConnection();
-const mqtt = new MqttClient(
+const mqtt = MqttClientFactory.create(
 	process.env.MQTT_SERVER_IP,
 	+process.env.MQTT_SERVER_PORT,
 	io

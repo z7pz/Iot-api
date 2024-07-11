@@ -15,5 +15,6 @@ export async function getUser(req: Request, res: Response) {
 			},
 		},
 	});
+	let s = data.notifications
 	res.send({ ...data, password: undefined, email: undefined });
 }

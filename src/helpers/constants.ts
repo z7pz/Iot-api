@@ -1,6 +1,3 @@
-export enum EAQIStatus {
-	GOOD = "GOOD",
-	MODERATE = "MODERATE",
-	UNHEALTHY_FOR_SENSETIVE_PEOPLE = "UNHEALTHY_FOR_SENSETIVE_PEOPLE",
-	DANGEROUS = "DANGEROUS",
-}
+export const PUBLIC_DEVICES = process.env.PUBLIC_DEVICES.split(",").filter(
+	(c) => !isNaN(+c)
+);

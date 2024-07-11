@@ -3,172 +3,147 @@ import admin from "firebase-admin";
 import serviceAccount from "../hackathon-89524-firebase-adminsdk-mq9dh-21a22d3ae7.json";
 import { prisma } from "./prisma";
 import { intoData } from "./helpers/intoData";
-import { between } from "./helpers/between";
-import { EAQIStatus } from "./helpers/constants";
-import { intoMessage } from "./helpers/intoMessage";
 import { Server } from "socket.io";
-import { emitNotification, emitToDevices } from "./socketClient";
-
-const USER_TOKEN =
-	"e0-amaF8TJSB08PCb0QOs1:APA91bGeRexHZZYzFGjPECRy_-MFc0B-XHykK4kKTTCaBKYmKOlxStulVarQTHs0XNSx7qfAlBxtn3XKdmFQTaPfy2c5LsrIEFxsFQyOCdVCJ1LXY0mtTMSWG2QZnV7T0mP0lENODuUI";
+import { emitToDevices, emitToPublicDevices } from "./socket";
+import {
+	AQIStrategy,
+	DefaultAQIStrategy,
+	EAQIStatus,
+} from "./strategies/AQIStrategy";
+import {
+	FirebaseNotificationObserver,
+	NotificationService,
+	SocketNotificationObserver,
+} from "services/notificaiton";
+import { PUBLIC_DEVICES } from "helpers/constants";
 
 admin.initializeApp({
 	credential: admin.credential.cert(serviceAccount as any),
 });
+
+export class MqttClientFactory {
+	static create(ip: string, port: number, io: Server): MqttClient {
+		return new MqttClient(
+			ip,
+			port,
+			io,
+			new DefaultAQIStrategy(),
+			new NotificationService()
+		);
+	}
+}
+
 export class MqttClient {
-	constructor(ip: string, port: number, public io: Server) {
-		let server = mqtt.connect(ip, {
+	private server: mqtt.MqttClient;
+
+	constructor(
+		ip: string,
+		port: number,
+		private _io: Server,
+		private aqiStrategy: AQIStrategy,
+		private notificationService: NotificationService
+	) {
+		const firebaseObserver = new FirebaseNotificationObserver();
+		const socketObserver = new SocketNotificationObserver();
+
+		notificationService.addObserver(firebaseObserver);
+		notificationService.addObserver(socketObserver);
+
+		this.server = mqtt.connect(ip, {
 			port: port,
 		});
 
-		server.subscribe("sensor/data");
+		this.server.subscribe("sensor/data");
 
-		server.on("connect", () => {
+		this.server.on("connect", () => {
 			console.log("mqtt has been connected!");
 		});
 
-		server.on("disconnect", () => {
+		this.server.on("disconnect", () => {
 			console.log("mqtt has been disconnected!");
 		});
-		server.on("message", async (_topic, payload) => {
-			let data = intoData(payload);
-			let device = await prisma.connectedDevices.findFirst({
-				where: {
-					id: data.id,
-				},
-				include: {
-					devices: {
-						include: {
-							location: {
-								include: {
-									user: true,
-								},
+		this.server.on("message", this.handleMessage.bind(this));
+	}
+	private async handleMessage(_, payload: Buffer) {
+		let data = intoData(payload);
+		let device = await prisma.connectedDevices.findFirst({
+			where: {
+				id: data.id,
+			},
+			include: {
+				devices: {
+					include: {
+						location: {
+							include: {
+								user: true,
 							},
 						},
 					},
 				},
-			});
+			},
+		});
 
-			if (!device) {
-				return await prisma.connectedDevices.create({
-					data: {
-						id: data.id,
-					},
-				});
-			}
-
-			let status = this.getEAQIStatus(data.AQI);
-
-			let processedData = await prisma.data.create({
+		if (!device) {
+			return await prisma.connectedDevices.create({
 				data: {
-					id: undefined,
-					AQI: data.AQI,
-					humidity: data.humidity,
-					dustPercentage: data.dust_percentage,
-					temperatureC: data.temperature_c,
-					temperatureF: data.temperature_f,
-					AQIStatus: status,
-					connectedDevice: {
-						connect: {
-							id: data.id,
-						},
-					},
+					id: data.id,
 				},
 			});
+		}
 
-			// TODO you can combind both in one loop
-			console.log(processedData);
-			for (let i = 0; i < device.devices.length; i++) {
-				const { id } = device.devices[i];
-				emitToDevices(id, "data", processedData);
-			}
+		let status = this.aqiStrategy.getStatus(data.AQI);
 
-			if (![EAQIStatus.GOOD].includes(status)) {
-				for (let i = 0; i < device.devices.length; i++) {
-					const location = device.devices[i].location;
-					let message = {
+		let processedData = await prisma.data.create({
+			data: {
+				id: undefined,
+				AQI: data.AQI,
+				humidity: data.humidity,
+				dustPercentage: data.dust_percentage,
+				temperatureC: data.temperature_c,
+				temperatureF: data.temperature_f,
+				AQIStatus: status.toString(),
+				connectedDevice: {
+					connect: {
+						id: data.id,
+					},
+				},
+			},
+		});
+
+		if (PUBLIC_DEVICES.includes(device.id)) {
+			emitToPublicDevices(device.id, "data", processedData);
+		}
+
+		device.devices.forEach(({ id }) => {
+			emitToDevices(id, "data", processedData);
+		});
+
+		if (![EAQIStatus.GOOD].includes(status)) {
+			await Promise.all(
+				device.devices.map(async ({ location }) => {
+					await this.notificationService.notifyAll({
 						title: `Warning air pollution is ${status
 							.split("_")
 							.join(" ")
 							.toLowerCase()}`,
 						description: "Warning air pollution",
 						status: status.split("_").join(" "),
-					};
-					await this.sendNotification({
-						message,
 						dataId: processedData.id,
 						locationId: location.id,
 						userId: location.user.id,
 						connectedDevicesId: device.id,
-						token: location.user.token
+						token: location.user.token,
 					});
-				}
-			}
-		});
-	}
-	async sendNotification({
-		message,
-		locationId,
-		dataId,
-		userId,
-		connectedDevicesId,
-		token
-	}: {
-		message: { title: string; description: string; status: string };
-		locationId: string;
-		dataId: string;
-		userId: string;
-		connectedDevicesId: string;
-		token: string | null,
-	}) {
-		if(token) {
-			console.log("Sending notification using firebase")
-			await this.sendNotificationToUser(message.title, message.description, token);
+
+					// 	message,
+					// 	dataId: processedData.id,
+					// 	locationId: location.id,
+					// 	userId: location.user.id,
+					// 	connectedDevicesId: device.id,
+					// 	token: location.user.token,
+					// });
+				})
+			);
 		}
-		let notification = await prisma.notification.create({
-			data: {
-				locationId,
-				dataId,
-				userId,
-				connectedDevicesId,
-				title: message.title,
-				description: message.description,
-				status: message.status,
-			},
-			include: {
-				"location": true
-			}
-		});
-		console.log("Sending notification using socket.io")
-		emitNotification(userId, "notification", notification)
-	}
-	async sendNotificationToUser(status: string, message: string, token: string) {
-		try {
-			await admin.messaging().send({
-				notification: {
-					title: status.split("_").join(" ").toLowerCase(),
-					body: message,
-				},
-				token,
-			});
-		} catch (err) {
-			console.log("sending notification ERROR");
-		}
-	}
-	getEAQIStatus(aqi: number) {
-		let status = EAQIStatus.DANGEROUS;
-		if (between(0, 50, true)(aqi)) {
-			status = EAQIStatus.GOOD;
-		}
-		if (between(51, 100, true)(aqi)) {
-			status = EAQIStatus.MODERATE;
-		}
-		if (between(101, 150, true)(aqi)) {
-			status = EAQIStatus.UNHEALTHY_FOR_SENSETIVE_PEOPLE;
-		}
-		if (aqi > 151) {
-			status = EAQIStatus.DANGEROUS;
-		}
-		return status;
 	}
 }
