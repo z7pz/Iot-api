@@ -49,23 +49,24 @@ export class MqttClient {
 		notificationService.addObserver(firebaseObserver);
 		notificationService.addObserver(socketObserver);
 
-		this.server = mqtt.connect(ip, {
-			port: port,
-		});
+		this.server = mqtt.connect(ip, { port });
 
 		this.server.subscribe("sensor/data");
 
-		this.server.on("connect", () => {
-			console.log("mqtt has been connected!");
-		});
+		this.server.on("connect", this.handleConnect.bind(this));
 
-		this.server.on("disconnect", () => {
-			console.log("mqtt has been disconnected!");
-		});
+		this.server.on("disconnect", this.handleDisconnect.bind(this));
 		this.server.on("message", this.handleMessage.bind(this));
+	}
+	private handleConnect() {
+		console.log("mqtt has been connected!");
+	}
+	private handleDisconnect() {
+		console.log("mqtt has been disconnected!");
 	}
 	private async handleMessage(_, payload: Buffer) {
 		let data = intoData(payload);
+		if(!data) return console.warn("Error while validation the payload")
 		let device = await prisma.connectedDevices.findFirst({
 			where: {
 				id: data.id,
