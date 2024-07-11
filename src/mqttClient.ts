@@ -135,6 +135,9 @@ export class MqttClient {
 				description: message.description,
 				status: message.status,
 			},
+			include: {
+				"location": true
+			}
 		});
 		console.log("Sending notification using socket.io")
 		emitNotification(userId, "notification", notification)
