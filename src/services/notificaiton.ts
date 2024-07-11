@@ -3,6 +3,11 @@ import serviceAccount from "../../hackathon-89524-firebase-adminsdk-mq9dh-21a22d
 import { emitNotification } from "../socket";
 import { prisma } from "../prisma";
 
+admin.initializeApp({
+	credential: admin.credential.cert(serviceAccount as any),
+});
+
+
 export type NotificationMessage = {
 	title: string;
 	description: string;
@@ -16,20 +21,26 @@ export type NotificationMessage = {
 
 export interface NotificationObserver {
 	notify(message: NotificationMessage): Promise<void>;
+	id(): string
 }
 
 export class FirebaseNotificationObserver implements NotificationObserver {
 	async notify(message: NotificationMessage): Promise<void> {
 		if (message.token) {
-			await admin.messaging().send({
-				notification: {
-					title: message.title,
-					body: message.description,
-				},
-				token: message.token,
-			});
+			try {
+				await admin.messaging().send({
+					notification: {
+						title: message.title,
+						body: message.description,
+					},
+					token: message.token,
+				});
+			} catch(err) {
+				// console.log("Token is invalid")
+			}
 		}
 	}
+	id() {return "firebase"}
 }
 
 export class SocketNotificationObserver implements NotificationObserver {
@@ -50,6 +61,7 @@ export class SocketNotificationObserver implements NotificationObserver {
 		});
 		emitNotification(message.userId, "notification", notification);
 	}
+	id() {return "socket"}
 }
 
 

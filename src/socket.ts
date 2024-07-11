@@ -31,17 +31,22 @@ export const socketConnection = () => {
 		},
 	});
 
-	// // Public namespace
-	// const publicNamespace = io.of("/");
-	// publicNamespace.on("connection", (socket) => {
-	// 	socket.on("disconnect", () => {
-	// 		console.log("User disconnected from public namespace");
-	// 	});
-	// });
+	const publicNamespace = io.of(/^\/publicDevices\/.+$/);
+	publicNamespace.on("connection", (socket) => {
+		const deviceId = socket.nsp.name.split("/").pop();
+		socket.join(deviceId);
+		
+		socket.on("data", (data) => {
+			console.log(`Public event received in ${deviceId}:`, data);
+			socket.to(deviceId).emit("data", data); 
+		});
 
-	// Private namespace
+		socket.on("disconnect", () => {
+			console.log("User disconnected from public namespace");
+		});
+	});
 	const devicesNamespace = io.of(/^\/devices\/.+$/);
-	devicesNamespace.use(authenticate); // Apply authentication middleware
+	devicesNamespace.use(authenticate); 
 	devicesNamespace.on("connection", (socket) => {
 		const deviceId = socket.nsp.name.split("/").pop();
 		console.log(
@@ -88,7 +93,7 @@ export const emitToDevices = (deviceId: string, event: string, data: Data) => {
 };
 
 export const emitToPublicDevices = (deviceId: string, event: string, data: Data) => {
-	const namespace = `/devices`;
+	const namespace = `/publicDevices/${deviceId}`;
 	const targetNamespace = io.of(namespace);
 	targetNamespace.to(deviceId).emit(event, data);
 };

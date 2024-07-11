@@ -14,12 +14,9 @@ import {
 	FirebaseNotificationObserver,
 	NotificationService,
 	SocketNotificationObserver,
-} from "services/notificaiton";
-import { PUBLIC_DEVICES } from "helpers/constants";
+} from "./services/notificaiton";
+import { PUBLIC_DEVICES } from "./helpers/constants";
 
-admin.initializeApp({
-	credential: admin.credential.cert(serviceAccount as any),
-});
 
 export class MqttClientFactory {
 	static create(ip: string, port: number, io: Server): MqttClient {
@@ -66,7 +63,7 @@ export class MqttClient {
 	}
 	private async handleMessage(_, payload: Buffer) {
 		let data = intoData(payload);
-		if(!data) return console.warn("Error while validation the payload")
+		if (!data) return console.warn("Error while validation the payload");
 		let device = await prisma.connectedDevices.findFirst({
 			where: {
 				id: data.id,
@@ -112,6 +109,7 @@ export class MqttClient {
 		});
 
 		if (PUBLIC_DEVICES.includes(device.id)) {
+			console.log(device.id)
 			emitToPublicDevices(device.id, "data", processedData);
 		}
 
