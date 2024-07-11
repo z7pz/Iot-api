@@ -122,7 +122,7 @@ export class MqttClient {
 			await Promise.all(
 				device.devices.map(async ({ location }) => {
 					const n = cache[`${location.id}-temperature`];
-					if (n && Date.now() - n.getTime() < 1000 * 20) {
+					if (n && Date.now() - n.getTime() < 1 * 60 * 60 * 1000) {
 						return;
 						// if there was a timeout then do nothing and wait
 					}
@@ -145,7 +145,7 @@ export class MqttClient {
 			await Promise.all(
 				device.devices.map(async ({ location }) => {
 					const n = cache[`${location.id}-humidity`];
-					if (n && Date.now() - n.getTime() < 1000 * 20) {
+					if (n && Date.now() - n.getTime() < 1 * 60 * 60 * 1000) {
 						return;
 						// if there was a timeout then do nothing and wait
 					}
@@ -168,7 +168,7 @@ export class MqttClient {
 			await Promise.all(
 				device.devices.map(async ({ location }) => {
 					const n = cache[`${location.id}-dust`];
-					if (n && Date.now() - n.getTime() < 1000 * 20) {
+					if (n && Date.now() - n.getTime() < 1 * 60 * 60 * 1000) {
 						return;
 					}
 					await this.notificationService.notifyAll({
@@ -192,7 +192,7 @@ export class MqttClient {
 			await Promise.all(
 				device.devices.map(async ({ location }) => {
 					const n = cache[`${location.id}-aqi`];
-					if (n && Date.now() - n.getTime() < 1000 * 20) {
+					if (n && Date.now() - n.getTime() < 1 * 60 * 60 * 1000) {
 						return;
 					}
 					await this.notificationService.notifyAll({
