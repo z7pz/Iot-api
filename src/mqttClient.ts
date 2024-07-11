@@ -29,6 +29,9 @@ export class MqttClientFactory {
 	}
 }
 
+// {[id-type]: date}
+const cache: Record<string, Date> = {};
+
 export class MqttClient {
 	private server: mqtt.MqttClient;
 
@@ -115,10 +118,14 @@ export class MqttClient {
 			emitToDevices(id, "data", processedData);
 		});
 
-
-		if (processedData.temperatureC > 45) {
+		if (processedData.temperatureC > 1) {
 			await Promise.all(
 				device.devices.map(async ({ location }) => {
+					const n = cache[`${location.id}-temperature`];
+					if (n && Date.now() - n.getTime() < 1000 * 20) {
+						return;
+						// if there was a timeout then do nothing and wait
+					}
 					await this.notificationService.notifyAll({
 						title: `الحرارة مرتفعة`,
 						description: "الحرارة مرتفعة",
@@ -129,14 +136,19 @@ export class MqttClient {
 						connectedDevicesId: device.id,
 						token: location.user.token,
 					});
+					cache[`${location.id}-temperature`] = new Date();
 				})
 			);
 		}
 
-
 		if (processedData.humidity > 60) {
 			await Promise.all(
 				device.devices.map(async ({ location }) => {
+					const n = cache[`${location.id}-humidity`];
+					if (n && Date.now() - n.getTime() < 1000 * 20) {
+						return;
+						// if there was a timeout then do nothing and wait
+					}
 					await this.notificationService.notifyAll({
 						title: `تحذير رطوبة عالية`,
 						description: "تحذير رطوبة عالية",
@@ -147,6 +159,8 @@ export class MqttClient {
 						connectedDevicesId: device.id,
 						token: location.user.token,
 					});
+					cache[`${location.id}-humidity`] = new Date();
+
 				})
 			);
 		}
@@ -154,9 +168,14 @@ export class MqttClient {
 		if (processedData.dustPercentage > 50) {
 			await Promise.all(
 				device.devices.map(async ({ location }) => {
+					const n = cache[`${location.id}-dust`];
+					if (n && Date.now() - n.getTime() < 1000 * 20) {
+						return;
+					}
 					await this.notificationService.notifyAll({
 						title: `تحذير تلوث مستوى تلوث عالي في الهواء المحيط`,
-						description: "تحذير تلوث مستوى تلوث عالي في الهواء المحيط",
+						description:
+							"تحذير تلوث مستوى تلوث عالي في الهواء المحيط",
 						status: "",
 						dataId: processedData.id,
 						location,
@@ -164,6 +183,8 @@ export class MqttClient {
 						connectedDevicesId: device.id,
 						token: location.user.token,
 					});
+					cache[`${location.id}-dust`] = new Date();
+
 				})
 			);
 		}
@@ -172,6 +193,10 @@ export class MqttClient {
 		if (data.AQI >= 200) {
 			await Promise.all(
 				device.devices.map(async ({ location }) => {
+					const n = cache[`${location.id}-aqi`];
+					if (n && Date.now() - n.getTime() < 1000 * 20) {
+						return;
+					}
 					await this.notificationService.notifyAll({
 						title: `جودة الهواء ${status
 							.split("_")
@@ -185,14 +210,7 @@ export class MqttClient {
 						connectedDevicesId: device.id,
 						token: location.user.token,
 					});
-
-					// 	message,
-					// 	dataId: processedData.id,
-					// 	locationId: location.id,
-					// 	userId: location.user.id,
-					// 	connectedDevicesId: device.id,
-					// 	token: location.user.token,
-					// });
+					cache[`${location.id}-aqi`] = new Date();
 				})
 			);
 		}

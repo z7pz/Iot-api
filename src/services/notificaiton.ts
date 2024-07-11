@@ -31,7 +31,7 @@ export class FirebaseNotificationObserver implements NotificationObserver {
 			try {
 				await admin.messaging().send({
 					notification: {
-						title: message.location.id,
+						title: message.location.name,
 						body: message.title,
 					},
 					token: message.token,
