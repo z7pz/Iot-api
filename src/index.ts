@@ -30,8 +30,7 @@ const mqtt = MqttClientFactory.create(
 app.use(
 	cors({
 		origin: process.env.CLIENT_URL,
-		credentials: true,
-		allowedHeaders: ["Cookie"],
+		credentials: true
 	})
 );
 
@@ -40,10 +39,10 @@ app.use(cookieParser(process.env.COOKIE_PARSER_SECRET));
 
 app.use(express.json());
 
+app.use("/public", publicRouter);
 app.use("/auth", authRouter);
 app.use("/user", isLoggedIn(true), userRouter);
 app.use("/locations", isLoggedIn(true), locationsRouter);
-app.use("/public", publicRouter);
 
 app.listen(process.env.PORT, () => {
 	console.log("Server is running on port: " + process.env.PORT);

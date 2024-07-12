@@ -115,6 +115,7 @@ export class MqttClient {
 		}
 
 		device.devices.forEach(({ id }) => {
+			console.log('emesion')
 			emitToDevices(id, "data", processedData);
 		});
 
