@@ -9,7 +9,6 @@ const authenticate = async (socket: Socket, next: (err?: Error) => void) => {
 	const token =
 		socket.handshake.auth?.token || socket.handshake.headers?.token;
 
-
 	if (!token) {
 		return next(new Error("Unauthorized"));
 	}
@@ -27,8 +26,15 @@ const authenticate = async (socket: Socket, next: (err?: Error) => void) => {
 export const socketConnection = () => {
 	io = new Server(+process.env.SOCKET_PORT, {
 		cors: {
-			origin: "*", // TODO CLIENT_URL
+			origin: process.env.CLIENT_URL, 
+			credentials: true,
+				"allowedHeaders": ["token"],
+				// "exposedHeaders": [""]
 		},
+		"allowEIO3": true,
+
+		transports: ['websocket', 'polling']
+	
 	});
 
 	const publicNamespace = io.of(/^\/publicDevices\/.+$/);
@@ -46,7 +52,7 @@ export const socketConnection = () => {
 		});
 	});
 	const devicesNamespace = io.of(/^\/devices\/.+$/);
-	devicesNamespace.use(authenticate); 
+	// devicesNamespace.use(authenticate); 
 	devicesNamespace.on("connection", (socket) => {
 		const deviceId = socket.nsp.name.split("/").pop();
 		console.log(
